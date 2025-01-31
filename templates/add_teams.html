@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Add Teams</h2>
+<form method="POST">
+    <label for="team_name">Team Name:</label>
+    <input type="text" name="team_name" id="team_name" required>
+    <button type="submit">Add Team</button>
+</form>
+
+<h3>Current Teams</h3>
+<ul>
+    {% for team in teams %}
+    <li>{{ team }}</li>
+    {% endfor %}
+</ul>
+<p><a href="{{ url_for('index') }}">Back to Home</a></p>
+{% endblock %}
