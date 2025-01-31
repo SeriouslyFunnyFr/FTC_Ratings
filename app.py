@@ -40,7 +40,7 @@ def matches():
     return render_template('matches.html', matches=matches)
 
 @app.route('/link_api', methods=['GET', 'POST'])
-def link_api_view():
+def link_api():
     if request.method == 'POST':
         team_number = request.form['team_number']
         event_code = request.form['event_code']
@@ -57,10 +57,10 @@ def link_api_view():
     return render_template('link_api.html')
 
         # Add match to database
-        new_match = Match(blue_alliance=blue_alliance, red_alliance=red_alliance, blue_score=blue_score, red_score=red_score)
-        db.session.add(new_match)
-        db.session.commit()
-        return redirect(url_for('matches'))
+    new_match = Match(blue_alliance=blue_alliance, red_alliance=red_alliance, blue_score=blue_score, red_score=red_score)
+    db.session.add(new_match)
+    db.session.commit()
+    return redirect(url_for('matches'))
     teams = Team.query.all()
     return render_template('add_match.html', teams=teams)
 
