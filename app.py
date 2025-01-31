@@ -42,10 +42,9 @@ def matches():
 @app.route('/link_api', methods=['GET', 'POST'])
 def link_api():
     if request.method == 'POST':
-        team_number = request.form['team_number']
         event_code = request.form['event_code']
         # Fetch team data from the API
-        response = requests.get(f'http://api.example.com/teams/{team_number}/events/{event_code}')
+            response = requests.get(f'http://ftc-api.firstinspires.org/2024/{event_code}')
         if response.status_code == 200:
             team_data = response.json()
             team_name = team_data.get('name', 'Unknown Team')
