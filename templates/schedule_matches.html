@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Schedule Matches</h2>
+<form method="POST">
+    <h3>Game {{ matches|length + 1 }}</h3>
+    <label for="blue_team1">Blue Alliance Team 1:</label>
+    <select name="blue_team1" id="blue_team1">
+        {% for team in teams %}
+        <option value="{{ team }}">{{ team }}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <label for="blue_team2">Blue Alliance Team 2:</label>
+    <select name="blue_team2" id="blue_team2">
+        {% for team in teams %}
+        <option value="{{ team }}">{{ team }}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <label for="red_team1">Red Alliance Team 1:</label>
+    <select name="red_team1" id="red_team1">
+        {% for team in teams %}
+        <option value="{{ team }}">{{ team }}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <label for="red_team2">Red Alliance Team 2:</label>
+    <select name="red_team2" id="red_team2">
+        {% for team in teams %}
+        <option value="{{ team }}">{{ team }}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <button type="submit">Schedule Match</button>
+</form>
+
+<h3>Scheduled Matches</h3>
+<ul>
+    {% for match in matches %}
+    <li>Game {{ match.game }}: {{ match.blue_alliance|join(' & ') }} vs {{ match.red_alliance|join(' & ') }}</li>
+    {% endfor %}
+</ul>
+<p><a href="{{ url_for('index') }}">Back to Home</a></p>
+{% endblock %}
