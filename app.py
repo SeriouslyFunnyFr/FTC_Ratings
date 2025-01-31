@@ -70,4 +70,26 @@ def add_match():
 
 def update_ratings(blue_alliance, red_alliance, blue_score, red_score):
     blue_teams = [Team.query.filter_by(name=name.strip()).first() for name in blue_alliance.split(',')]
-    red_teams = [Team.query.filter_by(name=name.strip()).
+    red_teams = [Team.query.filter_by(name=name.strip()).first() for name in red_alliance.split(',')]
+
+    # Convert to TrueSkill ratings
+    blue_ratings = [Rating(mu=team.rating_mu, sigma=team.rating_sigma) for team in blue_teams]
+    red_ratings = [Rating(mu=team.rating_mu, sigma=team.rating_sigma) for team in red_teams]
+
+    # Update ratings based on match outcome
+    if blue_score > red_score:
+        new_blue_ratings, new_red_ratings = rate([blue_ratings, red_ratings], ranks=[0, 1])
+    else:
+        new_blue_ratings, new_red_ratings = rate([blue_ratings, red_ratings], ranks=[1, 0])
+
+    # Save updated ratings
+    for i, team in enumerate(blue_teams):
+        team.rating_mu = new_blue_ratings[i].mu
+        team.rating_sigma = new_blue_ratings[i].sigma
+    for i, team in enumerate(red_teams):
+        team.rating_mu = new_red_ratings[i].mu
+        team.rating_sigma = new_red_ratings[i].sigma
+    db.session.commit()
+
+if __name__ == '__main__':
+    app.run(debug=True)
