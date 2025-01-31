@@ -1,6 +1,20 @@
-{% extends "base.html" %}
-{% block content %}
-<h2>Welcome to Robotics Scouting</h2>
-<p><a href="{{ url_for('scrape_matches_route') }}">Scrape Matches</a></p>
-<p><a href="{{ url_for('rankings') }}">View Rankings</a></p>
-{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTC Ratings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="my-4">FTC Ratings</h1>
+        <ul>
+            <li><a href="{{ url_for('teams') }}">View Teams</a></li>
+            <li><a href="{{ url_for('matches') }}">View Matches</a></li>
+            <li><a href="{{ url_for('add_team') }}">Add Team</a></li>
+            <li><a href="{{ url_for('add_match') }}">Add Match</a></li>
+        </ul>
+    </div>
+</body>
+</html>
