@@ -1,48 +1,62 @@
-from flask import Flask, render_template, request, redirect, url_for
-from utils.ratings import update_ratings
-from utils.scraper import scrape_matches  # Import the scraper function
+import requests
+import time
+import trueskill as ts
 
-app = Flask(__name__)
+# API Credentials (Replace with your actual credentials)
+USERNAME = "your_username"
+ACCESS_TOKEN = "your_access_token"
+BASE_URL = "https://ftc-events.firstinspires.org/v2.0"
 
-# In-memory storage for teams, matches, and ratings
-teams = {}  # Format: {'Team A': 1000, 'Team B': 1000, ...}
-matches = []  # Format: [{'game': 1, 'blue_alliance': ['Team A', 'Team B'], 'red_alliance': ['Team C', 'Team D'], 'blue_score': None, 'red_score': None}, ...]
+# Headers for authentication
+HEADERS = {
+    "Authorization": f"Basic {USERNAME}:{ACCESS_TOKEN}",
+    "Accept": "application/json"
+}
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Initialize TrueSkill environment
+env = ts.TrueSkill()
+teams = {}  # Dictionary to store team ratings
 
-@app.route('/add_teams', methods=['GET', 'POST'])
-def add_teams():
-    if request.method == 'POST':
-        team_name = request.form['team_name']
-        if team_name and team_name not in teams:
-            teams[team_name] = 1000  # Default rating for new teams
-    return render_template('add_teams.html', teams=teams.keys())
+def get_event_matches(event_code, season=2023):
+    """Fetches match results for a given event."""
+    url = f"{BASE_URL}/{season}/matches/{event_code}"
+    response = requests.get(url, headers=HEADERS)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error fetching match data: {response.status_code}")
+        return None
 
-@app.route('/scrape_matches', methods=['GET', 'POST'])
-def scrape_matches_route():
-    if request.method == 'POST':
-        url = request.form['url']
-        try:
-            scraped_matches = scrape_matches(url)  # Scrape matches from the provided URL
-            for match in scraped_matches:
-                # Add teams if they don't exist
-                for team in match['blue_alliance'] + match['red_alliance']:
-                    if team not in teams:
-                        teams[team] = 1000
-                # Add the match to the matches list
-                matches.append(match)
-            return redirect(url_for('rankings'))
-        except Exception as e:
-            return f"Error scraping matches: {str(e)}"
-    return render_template('scrape_matches.html')
+def update_ratings(red_team, blue_team, red_score, blue_score):
+    """Updates ratings using TrueSkill."""
+    for team in red_team + blue_team:
+        if team not in teams:
+            teams[team] = env.create_rating()
+    
+    if red_score > blue_score:
+        new_ratings = env.rate([(teams[red_team[0]], teams[red_team[1]]), (teams[blue_team[0]], teams[blue_team[1]])])
+    else:
+        new_ratings = env.rate([(teams[blue_team[0]], teams[blue_team[1]]), (teams[red_team[0]], teams[red_team[1]])])
+    
+    teams[red_team[0]], teams[red_team[1]] = new_ratings[0]
+    teams[blue_team[0]], teams[blue_team[1]] = new_ratings[1]
 
-@app.route('/rankings')
-def rankings():
-    # Sort teams by rating (descending)
-    sorted_teams = sorted(teams.items(), key=lambda x: x[1], reverse=True)
-    return render_template('rankings.html', teams=sorted_teams)
+def update_live_scores(event_code, interval=30):
+    """Continuously fetches and updates match data every `interval` seconds."""
+    while True:
+        matches = get_event_matches(event_code)
+        if matches:
+            print("Updated Match Data:")
+            for match in matches.get("matches", []):
+                red_team = match["red"]
+                blue_team = match["blue"]
+                red_score = match["redScore"]
+                blue_score = match["blueScore"]
+                update_ratings(red_team, blue_team, red_score, blue_score)
+                print(f"Match {match['matchNumber']}: {red_score} - {blue_score}")
+        time.sleep(interval)  # Wait before fetching again
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    EVENT_CODE = "YourEventCodeHere"  # Replace with actual event code
+    update_live_scores(EVENT_CODE)
