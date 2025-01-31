@@ -39,26 +39,22 @@ def matches():
     matches = Match.query.all()
     return render_template('matches.html', matches=matches)
 
-@app.route('/add_team', methods=['GET', 'POST'])
-def add_team():
+@app.route('/link_api', methods=['GET', 'POST'])
+def link_api_view():
     if request.method == 'POST':
-        name = request.form['name']
-        new_team = Team(name=name)
-        db.session.add(new_team)
-        db.session.commit()
-        return redirect(url_for('teams'))
-    return render_template('add_team.html')
-
-@app.route('/add_match', methods=['GET', 'POST'])
-def add_match():
-    if request.method == 'POST':
-        blue_alliance = f"{request.form['blue_team1']}, {request.form['blue_team2']}"
-        red_alliance = f"{request.form['red_team1']}, {request.form['red_team2']}"
-        blue_score = int(request.form['blue_score'])
-        red_score = int(request.form['red_score'])
-
-        # Update ratings
-        update_ratings(blue_alliance, red_alliance, blue_score, red_score)
+        team_number = request.form['team_number']
+        event_code = request.form['event_code']
+        # Fetch team data from the API
+        response = requests.get(f'http://api.example.com/teams/{team_number}/events/{event_code}')
+        if response.status_code == 200:
+            team_data = response.json()
+            team_name = team_data.get('name', 'Unknown Team')
+            # Process the data for TrueSkill (replace this with logic)
+            result = f"Data for team {team_name} at event {event_code}"
+            return f'<h1>Result: {result}</h1>'
+        else:
+            return '<h1>Error fetching team data</h1>'
+    return render_template('link_api.html')
 
         # Add match to database
         new_match = Match(blue_alliance=blue_alliance, red_alliance=red_alliance, blue_score=blue_score, red_score=red_score)
