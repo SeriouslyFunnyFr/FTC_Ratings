@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from utils.ratings import update_ratings
+from utils.scraper import scrape_matches  # Import the scraper function
 
 app = Flask(__name__)
 
@@ -19,42 +20,23 @@ def add_teams():
             teams[team_name] = 1000  # Default rating for new teams
     return render_template('add_teams.html', teams=teams.keys())
 
-@app.route('/schedule_matches', methods=['GET', 'POST'])
-def schedule_matches():
+@app.route('/scrape_matches', methods=['GET', 'POST'])
+def scrape_matches_route():
     if request.method == 'POST':
-        game_number = len(matches) + 1
-        blue_alliance = [request.form['blue_team1'], request.form['blue_team2']]
-        red_alliance = [request.form['red_team1'], request.form['red_team2']]
-        matches.append({
-            'game': game_number,
-            'blue_alliance': blue_alliance,
-            'red_alliance': red_alliance,
-            'blue_score': None,
-            'red_score': None,
-        })
-    return render_template('schedule_matches.html', teams=teams.keys(), matches=matches)
-
-@app.route('/record_scores', methods=['GET', 'POST'])
-def record_scores():
-    if request.method == 'POST':
-        game_number = int(request.form['game_number'])
-        blue_score = int(request.form['blue_score'])
-        red_score = int(request.form['red_score'])
-
-        # Update the match with scores
-        match = matches[game_number - 1]
-        match['blue_score'] = blue_score
-        match['red_score'] = red_score
-
-        # Update team ratings
-        blue_team1, blue_team2 = match['blue_alliance']
-        red_team1, red_team2 = match['red_alliance']
-        teams[blue_team1], teams[blue_team2], teams[red_team1], teams[red_team2] = update_ratings(
-            teams[blue_team1], teams[blue_team2],
-            teams[red_team1], teams[red_team2],
-            blue_score, red_score
-        )
-    return render_template('record_scores.html', matches=matches)
+        url = request.form['url']
+        try:
+            scraped_matches = scrape_matches(url)  # Scrape matches from the provided URL
+            for match in scraped_matches:
+                # Add teams if they don't exist
+                for team in match['blue_alliance'] + match['red_alliance']:
+                    if team not in teams:
+                        teams[team] = 1000
+                # Add the match to the matches list
+                matches.append(match)
+            return redirect(url_for('rankings'))
+        except Exception as e:
+            return f"Error scraping matches: {str(e)}"
+    return render_template('scrape_matches.html')
 
 @app.route('/rankings')
 def rankings():
