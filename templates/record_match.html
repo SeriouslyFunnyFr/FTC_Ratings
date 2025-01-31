@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Record a Match</h2>
+<form method="POST">
+    <h3>Alliance 1</h3>
+    <label for="alliance1_team1">Team 1:</label>
+    <select name="alliance1_team1" id="alliance1_team1">
+        {% for team in teams %}
+        <option value="{{ team }}">{{ team }}</option>
+        {% endfor %}
+        <option value="new">Add New Team</option>
+    </select>
+    <input type="text" name="new_alliance1_team1" id="new_alliance1_team1" placeholder="Enter new team name" style="display: none;">
+    <br>
+    <label for="alliance1_team2">Team 2:</label>
+    <select name="alliance1_team2" id="alliance1_team2">
+        {% for team in teams %}
+        <option value="{{ team }}">{{ team }}</option>
+        {% endfor %}
+        <option value="new">Add New Team</option>
+    </select>
+    <input type="text" name="new_alliance1_team2" id="new_alliance1_team2" placeholder="Enter new team name" style="display: none;">
+    <br>
+    <label for="alliance1_score">Alliance 1 Score:</label>
+    <input type="number" name="alliance1_score" id="alliance1_score" required>
+    <br>
+
+    <h3>Alliance 2</h3>
+    <label for="alliance2_team1">Team 1:</label>
+    <select name="alliance2_team1" id="alliance2_team1">
+        {% for team in teams %}
+        <option value="{{ team }}">{{ team }}</option>
+        {% endfor %}
+        <option value="new">Add New Team</option>
+    </select>
+    <input type="text" name="new_alliance2_team1" id="new_alliance2_team1" placeholder="Enter new team name" style="display: none;">
+    <br>
+    <label for="alliance2_team2">Team 2:</label>
+    <select name="alliance2_team2" id="alliance2_team2">
+        {% for team in teams %}
+        <option value="{{ team }}">{{ team }}</option>
+        {% endfor %}
+        <option value="new">Add New Team</option>
+    </select>
+    <input type="text" name="new_alliance2_team2" id="new_alliance2_team2" placeholder="Enter new team name" style="display: none;">
+    <br>
+    <label for="alliance2_score">Alliance 2 Score:</label>
+    <input type="number" name="alliance2_score" id="alliance2_score" required>
+    <br>
+
+    <button type="submit">Submit</button>
+</form>
+
+<script>
+    // Show/hide new team input fields
+    document.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', function() {
+            const newTeamInput = document.getElementById(`new_${this.id}`);
+            if (newTeamInput) {
+                newTeamInput.style.display = this.value === 'new' ? 'inline-block' : 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}
