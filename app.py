@@ -1,62 +1,73 @@
-import requests
-import time
-import trueskill as ts
+from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from trueskill import Rating, rate
 
-# API Credentials (Replace with your actual credentials)
-USERNAME = "your_username"
-ACCESS_TOKEN = "your_access_token"
-BASE_URL = "https://ftc-events.firstinspires.org/v2.0"
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ftc_ratings.db'
+db = SQLAlchemy(app)
 
-# Headers for authentication
-HEADERS = {
-    "Authorization": f"Basic {USERNAME}:{ACCESS_TOKEN}",
-    "Accept": "application/json"
-}
+# Database Models
+class Team(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    rating_mu = db.Column(db.Float, default=25.0)
+    rating_sigma = db.Column(db.Float, default=8.333)
 
-# Initialize TrueSkill environment
-env = ts.TrueSkill()
-teams = {}  # Dictionary to store team ratings
+class Match(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    blue_alliance = db.Column(db.String(100), nullable=False)
+    red_alliance = db.Column(db.String(100), nullable=False)
+    blue_score = db.Column(db.Integer, nullable=False)
+    red_score = db.Column(db.Integer, nullable=False)
 
-def get_event_matches(event_code, season=2023):
-    """Fetches match results for a given event."""
-    url = f"{BASE_URL}/{season}/matches/{event_code}"
-    response = requests.get(url, headers=HEADERS)
-    
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Error fetching match data: {response.status_code}")
-        return None
+# Create the database
+with app.app_context():
+    db.create_all()
 
-def update_ratings(red_team, blue_team, red_score, blue_score):
-    """Updates ratings using TrueSkill."""
-    for team in red_team + blue_team:
-        if team not in teams:
-            teams[team] = env.create_rating()
-    
-    if red_score > blue_score:
-        new_ratings = env.rate([(teams[red_team[0]], teams[red_team[1]]), (teams[blue_team[0]], teams[blue_team[1]])])
-    else:
-        new_ratings = env.rate([(teams[blue_team[0]], teams[blue_team[1]]), (teams[red_team[0]], teams[red_team[1]])])
-    
-    teams[red_team[0]], teams[red_team[1]] = new_ratings[0]
-    teams[blue_team[0]], teams[blue_team[1]] = new_ratings[1]
+# Routes
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-def update_live_scores(event_code, interval=30):
-    """Continuously fetches and updates match data every `interval` seconds."""
-    while True:
-        matches = get_event_matches(event_code)
-        if matches:
-            print("Updated Match Data:")
-            for match in matches.get("matches", []):
-                red_team = match["red"]
-                blue_team = match["blue"]
-                red_score = match["redScore"]
-                blue_score = match["blueScore"]
-                update_ratings(red_team, blue_team, red_score, blue_score)
-                print(f"Match {match['matchNumber']}: {red_score} - {blue_score}")
-        time.sleep(interval)  # Wait before fetching again
+@app.route('/teams')
+def teams():
+    teams = Team.query.order_by(Team.rating_mu.desc()).all()
+    return render_template('teams.html', teams=teams)
 
-if __name__ == "__main__":
-    EVENT_CODE = "YourEventCodeHere"  # Replace with actual event code
-    update_live_scores(EVENT_CODE)
+@app.route('/matches')
+def matches():
+    matches = Match.query.all()
+    return render_template('matches.html', matches=matches)
+
+@app.route('/add_team', methods=['GET', 'POST'])
+def add_team():
+    if request.method == 'POST':
+        name = request.form['name']
+        new_team = Team(name=name)
+        db.session.add(new_team)
+        db.session.commit()
+        return redirect(url_for('teams'))
+    return render_template('add_team.html')
+
+@app.route('/add_match', methods=['GET', 'POST'])
+def add_match():
+    if request.method == 'POST':
+        blue_alliance = f"{request.form['blue_team1']}, {request.form['blue_team2']}"
+        red_alliance = f"{request.form['red_team1']}, {request.form['red_team2']}"
+        blue_score = int(request.form['blue_score'])
+        red_score = int(request.form['red_score'])
+
+        # Update ratings
+        update_ratings(blue_alliance, red_alliance, blue_score, red_score)
+
+        # Add match to database
+        new_match = Match(blue_alliance=blue_alliance, red_alliance=red_alliance, blue_score=blue_score, red_score=red_score)
+        db.session.add(new_match)
+        db.session.commit()
+        return redirect(url_for('matches'))
+    teams = Team.query.all()
+    return render_template('add_match.html', teams=teams)
+
+def update_ratings(blue_alliance, red_alliance, blue_score, red_score):
+    blue_teams = [Team.query.filter_by(name=name.strip()).first() for name in blue_alliance.split(',')]
+    red_teams = [Team.query.filter_by(name=name.strip()).
